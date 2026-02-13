@@ -37,4 +37,12 @@ for _, binding in ipairs(appBindings) do
     end)
 end
 
+-- Cmd+` -> Ghostty (quake-style toggle)
+hs.hotkey.bind({"cmd"}, "`", function()
+    local app = hs.application.launchOrFocus("Ghostty")
+    if app == nil then
+        hs.alert.show("Could not launch Ghostty")
+    end
+end)
+
 hs.alert.show("Hammerspoon config loaded")
