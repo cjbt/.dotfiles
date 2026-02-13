@@ -1,0 +1,7 @@
+# Default stow ignores plus repo files
+\.git
+\.gitignore
+\.stow-global-ignore
+install\.sh
+README\.md
+LICENSE

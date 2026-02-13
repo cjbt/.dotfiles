@@ -1,0 +1,11 @@
+font-family = JetBrains Mono
+font-size = 14
+
+theme = catppuccin-mocha
+
+window-padding-x = 10
+window-padding-y = 10
+
+scrollback-limit = 10000
+
+keybind = super+grave_accent=toggle_quick_terminal
