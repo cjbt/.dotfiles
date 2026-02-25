@@ -3,5 +3,7 @@
 \.gitignore
 \.stow-global-ignore
 install\.sh
+bootstrap\.sh
+Brewfile
 README\.md
 LICENSE

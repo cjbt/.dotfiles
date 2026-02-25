@@ -153,7 +153,10 @@ alias rg='rg --smart-case'
 # -----------------------------------------------------------------------------
 # Company Secrets (sourced from ~/.config/secrets/)
 # -----------------------------------------------------------------------------
-[[ -f ~/.config/secrets/latimes.zsh ]] && source ~/.config/secrets/latimes.zsh
+for _secrets_file in ~/.config/secrets/*.zsh(N); do
+  source "$_secrets_file"
+done
+unset _secrets_file
 
 # -----------------------------------------------------------------------------
 # Common Aliases
