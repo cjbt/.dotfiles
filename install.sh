@@ -5,11 +5,9 @@ set -euo pipefail
 # Usage: ./install.sh [company]
 #   company — name of a 1Password vault (default: personal)
 #
-# Required 1Password items (in $COMPANY vault):
-#   "Git Config"  — fields: email, signing_key
-#   "GitHub"      — fields: token
-#
-# Optional 1Password items (processed when they exist):
+# All 1Password items are optional (processed when they exist in $COMPANY vault):
+#   "Git Config"     — fields: email, signing_key → ~/.gitconfig-github
+#   "GitHub"         — fields: token → gh auth login
 #   "Shell Secrets"  — any env var fields → ~/.config/secrets/$COMPANY.zsh
 #   "GitLab Config"  — fields: signing_key → ~/.gitconfig-gitlab
 #   "AWS Default"    — fields: access_key_id, secret_access_key
@@ -61,17 +59,20 @@ if ! op vault get "$COMPANY" &>/dev/null; then
   exit 1
 fi
 
-# ── 5. Git Config (required) ───────────────────────────────────────────────────
-info "Writing ~/.gitconfig-github..."
-GIT_EMAIL="$(op_read_field "$COMPANY" "Git Config" "email")"
-GIT_SIGNING_KEY="$(op_read_field "$COMPANY" "Git Config" "signing_key")"
-
-cat > ~/.gitconfig-github <<EOF
+# ── 5. Git Config (optional) ────────────────────────────────────────────────
+if op_item_exists "$COMPANY" "Git Config"; then
+  info "Writing ~/.gitconfig-github..."
+  GIT_EMAIL="$(op_read_field "$COMPANY" "Git Config" "email")"
+  GIT_SIGNING_KEY="$(op_read_field "$COMPANY" "Git Config" "signing_key")"
+  cat > ~/.gitconfig-github <<EOF
 [user]
 	email = ${GIT_EMAIL}
 	signingKey = ${GIT_SIGNING_KEY}
 EOF
-chmod 600 ~/.gitconfig-github
+  chmod 600 ~/.gitconfig-github
+else
+  warn "No 'Git Config' item found in '$COMPANY' vault — skipping"
+fi
 
 # ── 6. GitLab Config (optional) ────────────────────────────────────────────────
 if op_item_exists "$COMPANY" "GitLab Config"; then
@@ -173,10 +174,14 @@ else
   warn "No 'NPM Config' item found in '$COMPANY' vault — skipping"
 fi
 
-# ── 10. GitHub auth (required) ─────────────────────────────────────────────────
-info "Authenticating with GitHub..."
-GH_TOKEN="$(op_read_field "$COMPANY" "GitHub" "token")"
-echo "$GH_TOKEN" | gh auth login --with-token
+# ── 10. GitHub auth (optional) ─────────────────────────────────────────────────
+if op_item_exists "$COMPANY" "GitHub"; then
+  info "Authenticating with GitHub..."
+  GH_TOKEN="$(op_read_field "$COMPANY" "GitHub" "token")"
+  echo "$GH_TOKEN" | gh auth login --with-token
+else
+  warn "No 'GitHub' item found in '$COMPANY' vault — skipping gh auth"
+fi
 
 # ── 11. Stow dotfile packages ──────────────────────────────────────────────────
 info "Stowing dotfile packages..."

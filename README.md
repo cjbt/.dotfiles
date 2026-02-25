@@ -27,17 +27,14 @@ curl -fsSL https://raw.githubusercontent.com/cjbt/.dotfiles/main/bootstrap.sh | 
 
 Every company vault uses the same item names. **Adding a new company = create vault + add items. Zero code changes.**
 
-### Required items
+All items are optional — skipped gracefully if absent. Only the vault itself must exist.
 
-| Item | Fields |
-|---|---|
-| `Git Config` | `email`, `signing_key` |
-| `GitHub` | `token` |
-
-### Optional items (skipped gracefully if absent)
+### Optional items
 
 | Item | Fields | Generates |
 |---|---|---|
+| `Git Config` | `email`, `signing_key` | `~/.gitconfig-github` |
+| `GitHub` | `token` | `gh auth login` |
 | `Shell Secrets` | any env var fields | `~/.config/secrets/$COMPANY.zsh` |
 | `GitLab Config` | `signing_key` | `~/.gitconfig-gitlab` |
 | `AWS Default` | `access_key_id`, `secret_access_key` | `~/.aws/credentials` |
@@ -56,12 +53,12 @@ All fields in `Shell Secrets` are exported as environment variables. This covers
 2. `brew bundle` from `Brewfile`
 3. Create `~/dev/personal` and `~/dev/work`
 4. Validate the 1Password vault exists
-5. Write `~/.gitconfig-github` from `Git Config` item
+5. Write `~/.gitconfig-github` from `Git Config` item (optional)
 6. Write `~/.gitconfig-gitlab` from `GitLab Config` item (optional)
 7. Write `~/.config/secrets/$COMPANY.zsh` from `Shell Secrets` item (optional)
 8. Write `~/.aws/credentials` + `~/.aws/config` from AWS items (optional)
 9. Write `~/.npmrc` from `NPM Config` item (optional)
-10. `gh auth login` with token from `GitHub` item
+10. `gh auth login` with token from `GitHub` item (optional)
 11. Stow all dotfile packages
 12. `mise install` (Java 21, Node LTS, Python 3.12)
 13. Install Claude Code and write `ANTHROPIC_API_KEY` to secrets file (optional)
