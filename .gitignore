@@ -9,3 +9,5 @@
 # Secrets — never commit these
 .env
 *.secret
+
+.idea

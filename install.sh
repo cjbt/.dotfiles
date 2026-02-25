@@ -10,7 +10,7 @@ set -euo pipefail
 #   "GitHub"         — fields: token → gh auth login
 #   "Shell Secrets"  — any env var fields → ~/.config/secrets/$COMPANY.zsh
 #   "GitLab Config"  — fields: signing_key → ~/.gitconfig-gitlab
-#   "AWS Default"    — fields: access_key_id, secret_access_key
+#   "AWS Platform Dev"    — fields: access_key_id, secret_access_key
 #   "AWS Data Dev"   — fields: access_key_id, secret_access_key
 #   "AWS Datadesk"   — fields: access_key_id, secret_access_key
 #   "NPM Config"     — fields: scoped_registry, registry_host → ~/.npmrc
@@ -123,8 +123,8 @@ else
 fi
 
 # ── 8. AWS credentials (optional) ──────────────────────────────────────────────
-AWS_ITEMS=("AWS Default" "AWS Data Dev" "AWS Datadesk")
-AWS_PROFILES=("default" "data-dev" "datadesk")
+AWS_ITEMS=("AWS Platform Dev" "AWS Data Dev" "AWS Datadesk")
+AWS_PROFILES=("platform-dev" "data-dev" "datadesk")
 
 AWS_CREDS_CONTENT=""
 AWS_CONFIG_CONTENT=""
@@ -167,7 +167,7 @@ if op_item_exists "$COMPANY" "NPM Config"; then
   REGISTRY_HOST="$(op_read_field "$COMPANY" "NPM Config" "registry_host")"
   cat > ~/.npmrc <<EOF
 ${SCOPED_REGISTRY}:registry=https://${REGISTRY_HOST}/
-//${REGISTRY_HOST}/:always-auth=true
+//${REGISTRY_HOST}/:_authToken=\${GITLAB_NPM_TOKEN}
 EOF
   chmod 600 ~/.npmrc
 else
