@@ -10,11 +10,9 @@ set -euo pipefail
 #   "GitHub"         — fields: token → gh auth login
 #   "Shell Secrets"  — any env var fields → ~/.config/secrets/$COMPANY.zsh
 #   "GitLab Config"  — fields: signing_key → ~/.gitconfig-gitlab
-#   "AWS Platform Dev"    — fields: access_key_id, secret_access_key
-#   "AWS Data Dev"   — fields: access_key_id, secret_access_key
-#   "AWS Datadesk"   — fields: access_key_id, secret_access_key
-#   "NPM Config"     — fields: scoped_registry, registry_host → ~/.npmrc
 #   "Claude Code"    — fields: api_key → appended to secrets file + installs claude
+#
+# Company-specific steps: see companies/<slug>.sh
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPANY="${1:-personal}"
@@ -96,7 +94,9 @@ if op_item_exists "$COMPANY" "Shell Secrets"; then
   info "Writing $SECRETS_DIR/$COMPANY.zsh..."
   SECRETS_FILE="$SECRETS_DIR/$COMPANY.zsh"
 
-  # Read all fields via JSON and emit export lines, skipping 1Password metadata fields
+  # Read all fields via JSON and emit export lines, skipping 1Password metadata fields.
+  # Fields with labels starting with "#" are written as commented-out exports —
+  # they stay in 1Password for reference but are inactive until manually uncommented.
   op item get "Shell Secrets" --vault "$COMPANY" --format json --reveal \
     | python3 - <<'PYEOF' > "$SECRETS_FILE"
 import json, sys
@@ -112,9 +112,11 @@ for field in data.get("fields", []):
         continue
     if label in SKIP_LABELS:
         continue
-    # Escape single quotes in value
+    commented = label.startswith("#")
+    clean_label = label.lstrip("#").strip()
     escaped = value.replace("'", "'\\''")
-    print(f"export {label}='{escaped}'")
+    prefix = "# " if commented else ""
+    print(f"{prefix}export {clean_label}='{escaped}'")
 PYEOF
 
   chmod 600 "$SECRETS_FILE"
@@ -122,59 +124,7 @@ else
   warn "No 'Shell Secrets' item found in '$COMPANY' vault — skipping"
 fi
 
-# ── 8. AWS credentials (optional) ──────────────────────────────────────────────
-AWS_ITEMS=("AWS Platform Dev" "AWS Data Dev" "AWS Datadesk")
-AWS_PROFILES=("platform-dev" "data-dev" "datadesk")
-
-AWS_CREDS_CONTENT=""
-AWS_CONFIG_CONTENT=""
-
-for i in "${!AWS_ITEMS[@]}"; do
-  item="${AWS_ITEMS[$i]}"
-  profile="${AWS_PROFILES[$i]}"
-
-  if op_item_exists "$COMPANY" "$item"; then
-    info "Reading '$item' from '$COMPANY' vault..."
-    KEY_ID="$(op_read_field "$COMPANY" "$item" "access_key_id")"
-    SECRET="$(op_read_field "$COMPANY" "$item" "secret_access_key")"
-    AWS_CREDS_CONTENT+="[${profile}]
-aws_access_key_id = ${KEY_ID}
-aws_secret_access_key = ${SECRET}
-
-"
-    AWS_CONFIG_CONTENT+="[profile ${profile}]
-region = us-east-1
-
-"
-  fi
-done
-
-if [[ -n "$AWS_CREDS_CONTENT" ]]; then
-  info "Writing ~/.aws/credentials and ~/.aws/config..."
-  mkdir -p ~/.aws
-  printf '%s' "$AWS_CREDS_CONTENT" > ~/.aws/credentials
-  chmod 600 ~/.aws/credentials
-  printf '%s' "$AWS_CONFIG_CONTENT" > ~/.aws/config
-  chmod 600 ~/.aws/config
-else
-  warn "No AWS items found in '$COMPANY' vault — skipping"
-fi
-
-# ── 9. NPM Config (optional) ───────────────────────────────────────────────────
-if op_item_exists "$COMPANY" "NPM Config"; then
-  info "Writing ~/.npmrc..."
-  SCOPED_REGISTRY="$(op_read_field "$COMPANY" "NPM Config" "scoped_registry")"
-  REGISTRY_HOST="$(op_read_field "$COMPANY" "NPM Config" "registry_host")"
-  cat > ~/.npmrc <<EOF
-${SCOPED_REGISTRY}:registry=https://${REGISTRY_HOST}/
-//${REGISTRY_HOST}/:_authToken=\${GITLAB_NPM_TOKEN}
-EOF
-  chmod 600 ~/.npmrc
-else
-  warn "No 'NPM Config' item found in '$COMPANY' vault — skipping"
-fi
-
-# ── 10. GitHub auth (optional) ─────────────────────────────────────────────────
+# ── 8. GitHub auth (optional) ─────────────────────────────────────────────────
 if op_item_exists "$COMPANY" "GitHub"; then
   info "Authenticating with GitHub..."
   GH_TOKEN="$(op_read_field "$COMPANY" "GitHub" "token")"
@@ -183,7 +133,7 @@ else
   warn "No 'GitHub' item found in '$COMPANY' vault — skipping gh auth"
 fi
 
-# ── 11. Stow dotfile packages ──────────────────────────────────────────────────
+# ── 9. Stow dotfile packages ──────────────────────────────────────────────────
 info "Stowing dotfile packages..."
 cd "$DOTFILES_DIR"
 packages=(zsh git starship ghostty mise hammerspoon ssh)
@@ -192,11 +142,11 @@ for pkg in "${packages[@]}"; do
   stow --restow "$pkg"
 done
 
-# ── 12. mise install ───────────────────────────────────────────────────────────
+# ── 10. mise install ───────────────────────────────────────────────────────────
 info "Installing mise runtimes..."
-mise install java@temurin-21 node@lts python@3.12
+mise install node@lts python@3.12
 
-# ── 13. Claude Code (optional) ─────────────────────────────────────────────────
+# ── 11. Claude Code (optional) ─────────────────────────────────────────────────
 if op_item_exists "$COMPANY" "Claude Code"; then
   info "Installing Claude Code..."
   ANTHROPIC_API_KEY="$(op_read_field "$COMPANY" "Claude Code" "api_key")"
@@ -218,6 +168,15 @@ if op_item_exists "$COMPANY" "Claude Code"; then
   npm install -g @anthropic-ai/claude-code
 else
   warn "No 'Claude Code' item found in '$COMPANY' vault — skipping"
+fi
+
+# ── 12. Company hook ───────────────────────────────────────────────────────────
+COMPANY_SLUG="$(basename "$COMPANY" | tr '[:upper:]' '[:lower:]')"
+COMPANY_SCRIPT="$DOTFILES_DIR/companies/${COMPANY_SLUG}.sh"
+if [[ -f "$COMPANY_SCRIPT" ]]; then
+  info "Running company script: $COMPANY_SCRIPT"
+  # shellcheck source=/dev/null
+  source "$COMPANY_SCRIPT"
 fi
 
 info "Done! Open a new shell or run: source ~/.zshrc"
