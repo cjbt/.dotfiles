@@ -10,12 +10,13 @@ set -euo pipefail
 #   "GitHub"         — fields: token → gh auth login
 #   "Shell Secrets"  — any env var fields → ~/.config/secrets/$COMPANY.zsh
 #   "GitLab Config"  — fields: signing_key → ~/.gitconfig-gitlab
-#   "Claude Code"    — fields: api_key → appended to secrets file + installs claude
+#   "Claude Code"    — fields: api_key → appended to secrets file (install always runs)
 #
 # Company-specific steps: see companies/<slug>.sh
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPANY="${1:-personal}"
+COMPANY_SLUG="$(basename "$COMPANY" | tr '[:upper:]' '[:lower:]')"
 
 # ── colours ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
@@ -43,7 +44,7 @@ fi
 
 # ── 2. brew bundle ─────────────────────────────────────────────────────────────
 info "Running brew bundle..."
-brew bundle --file="$DOTFILES_DIR/Brewfile"
+brew bundle --file="$DOTFILES_DIR/Brewfile" || warn "brew bundle had failures — already-installed apps may need sudo to adopt (safe to ignore)"
 
 # ── 3. dev directories ─────────────────────────────────────────────────────────
 info "Creating ~/dev directories..."
@@ -91,14 +92,17 @@ mkdir -p "$SECRETS_DIR"
 chmod 700 "$SECRETS_DIR"
 
 if op_item_exists "$COMPANY" "Shell Secrets"; then
-  info "Writing $SECRETS_DIR/$COMPANY.zsh..."
-  SECRETS_FILE="$SECRETS_DIR/$COMPANY.zsh"
+  info "Writing $SECRETS_DIR/$COMPANY_SLUG.zsh..."
+  SECRETS_FILE="$SECRETS_DIR/$COMPANY_SLUG.zsh"
 
   # Read all fields via JSON and emit export lines, skipping 1Password metadata fields.
   # Fields with labels starting with "#" are written as commented-out exports —
   # they stay in 1Password for reference but are inactive until manually uncommented.
-  op item get "Shell Secrets" --vault "$COMPANY" --format json --reveal \
-    | python3 - <<'PYEOF' > "$SECRETS_FILE"
+  #
+  # Note: Python script is written to a temp file so the JSON pipe to stdin works
+  # correctly (pipe + heredoc conflict makes json.load(sys.stdin) receive nothing).
+  _PY_SCRIPT="$(mktemp)"
+  cat > "$_PY_SCRIPT" <<'PYEOF'
 import json, sys
 
 data = json.load(sys.stdin)
@@ -118,6 +122,9 @@ for field in data.get("fields", []):
     prefix = "# " if commented else ""
     print(f"{prefix}export {clean_label}='{escaped}'")
 PYEOF
+  op item get "Shell Secrets" --vault "$COMPANY" --format json --reveal \
+    | python3 "$_PY_SCRIPT" > "$SECRETS_FILE"
+  rm "$_PY_SCRIPT"
 
   chmod 600 "$SECRETS_FILE"
 else
@@ -128,7 +135,7 @@ fi
 if op_item_exists "$COMPANY" "GitHub"; then
   info "Authenticating with GitHub..."
   GH_TOKEN="$(op_read_field "$COMPANY" "GitHub" "token")"
-  echo "$GH_TOKEN" | gh auth login --with-token
+  echo "$GH_TOKEN" | gh auth login --with-token || warn "GitHub auth failed — token may be expired, update in 1Password and re-run"
 else
   warn "No 'GitHub' item found in '$COMPANY' vault — skipping gh auth"
 fi
@@ -139,39 +146,33 @@ cd "$DOTFILES_DIR"
 packages=(zsh git starship ghostty mise hammerspoon ssh)
 for pkg in "${packages[@]}"; do
   info "  -> $pkg"
-  stow --restow "$pkg"
+  stow --restow --adopt --target "$HOME" "$pkg"
 done
 
 # ── 10. mise install ───────────────────────────────────────────────────────────
 info "Installing mise runtimes..."
 mise install node@lts python@3.12
 
-# ── 11. Claude Code (optional) ─────────────────────────────────────────────────
-if op_item_exists "$COMPANY" "Claude Code"; then
-  info "Installing Claude Code..."
-  ANTHROPIC_API_KEY="$(op_read_field "$COMPANY" "Claude Code" "api_key")"
+# ── 11. Claude Code ────────────────────────────────────────────────────────────
+info "Installing Claude Code..."
+npm install -g @anthropic-ai/claude-code
 
-  # Append key to secrets file (create if it doesn't exist)
-  SECRETS_FILE="$SECRETS_DIR/$COMPANY.zsh"
+# If vault has a "Claude Code" item with api_key, append it to the secrets file
+if op_item_exists "$COMPANY" "Claude Code"; then
+  ANTHROPIC_API_KEY="$(op_read_field "$COMPANY" "Claude Code" "api_key")"
+  SECRETS_FILE="$SECRETS_DIR/$COMPANY_SLUG.zsh"
   if [[ ! -f "$SECRETS_FILE" ]]; then
     mkdir -p "$SECRETS_DIR"
     chmod 700 "$SECRETS_DIR"
     touch "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE"
   fi
-
-  # Only append if not already present
   if ! grep -q "ANTHROPIC_API_KEY" "$SECRETS_FILE" 2>/dev/null; then
     echo "export ANTHROPIC_API_KEY='${ANTHROPIC_API_KEY}'" >> "$SECRETS_FILE"
   fi
-
-  npm install -g @anthropic-ai/claude-code
-else
-  warn "No 'Claude Code' item found in '$COMPANY' vault — skipping"
 fi
 
 # ── 12. Company hook ───────────────────────────────────────────────────────────
-COMPANY_SLUG="$(basename "$COMPANY" | tr '[:upper:]' '[:lower:]')"
 COMPANY_SCRIPT="$DOTFILES_DIR/companies/${COMPANY_SLUG}.sh"
 if [[ -f "$COMPANY_SCRIPT" ]]; then
   info "Running company script: $COMPANY_SCRIPT"

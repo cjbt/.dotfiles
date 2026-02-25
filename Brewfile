@@ -10,7 +10,7 @@ brew "zoxide"
 brew "starship"
 brew "mise"
 brew "gh"
-brew "1password-cli"
+cask "1password-cli"
 brew "zsh-autosuggestions"
 brew "zsh-syntax-highlighting"
 

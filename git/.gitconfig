@@ -3,15 +3,16 @@
 # =============================================================================
 [user]
     name = Cecil J. Tantay
-    email = cjbtantay@gmail.com
+    email = git@ceej.dev
+    signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGKC16qHpL1GFPdV5sBfgC+UvWcs/UDHq9FLjwQFkz0v
 
-[includeIf "hasconfig:remote.*.url:git@gitlab.com:/**"]
+[includeIf "hasconfig:remote.*.url:git@gitlab.com:*/*"]
     path = ~/.gitconfig-gitlab
 
 [includeIf "hasconfig:remote.*.url:https://gitlab.com/**"]
     path = ~/.gitconfig-gitlab
 
-[includeIf "hasconfig:remote.*.url:git@github.com:/**"]
+[includeIf "hasconfig:remote.*.url:git@github.com:*/*"]
     path = ~/.gitconfig-github
 
 [includeIf "hasconfig:remote.*.url:https://github.com/**"]
@@ -35,6 +36,7 @@
     colorMoved = default
 [pull]
     rebase = false
+	ff = only
 [push]
     autoSetupRemote = true
     default = current

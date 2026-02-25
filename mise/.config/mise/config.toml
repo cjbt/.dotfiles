@@ -1,4 +1,4 @@
 [tools]
-java = "21"
+java = "corretto-11"
 node = "lts"
 python = "3.12"

@@ -25,13 +25,24 @@ for i in "${!AWS_ITEMS[@]}"; do
     info "Reading '$item' from '$COMPANY' vault..."
     KEY_ID="$(op_read_field "$COMPANY" "$item" "access_key_id")"
     SECRET="$(op_read_field "$COMPANY" "$item" "secret_access_key")"
+
+    # platform-dev also becomes the [default] profile
+    if [[ "$profile" == "platform-dev" ]]; then
+      AWS_CREDS_CONTENT+="[default]
+aws_access_key_id = ${KEY_ID}
+aws_secret_access_key = ${SECRET}
+
+"
+    fi
+
     AWS_CREDS_CONTENT+="[${profile}]
 aws_access_key_id = ${KEY_ID}
 aws_secret_access_key = ${SECRET}
 
 "
-    AWS_CONFIG_CONTENT+="[profile ${profile}]
-region = us-east-1
+    AWS_CONFIG_CONTENT+="[profile caltimes-${profile}]
+region = us-west-2
+output = json
 
 "
   fi
