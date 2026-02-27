@@ -149,13 +149,14 @@ for pkg in "${packages[@]}"; do
   stow --restow --adopt --target "$HOME" "$pkg"
 done
 
-# ── 10. mise install ───────────────────────────────────────────────────────────
+# ── 10. mise runtimes ──────────────────────────────────────────────────────────
 info "Installing mise runtimes..."
-mise install node@lts python@3.12
+mise use --global node@lts
+mise use --global python@3.12
 
 # ── 11. Claude Code ────────────────────────────────────────────────────────────
 info "Installing Claude Code..."
-npm install -g @anthropic-ai/claude-code
+mise exec node -- npm install -g @anthropic-ai/claude-code
 
 # If vault has a "Claude Code" item with api_key, append it to the secrets file
 if op_item_exists "$COMPANY" "Claude Code"; then
