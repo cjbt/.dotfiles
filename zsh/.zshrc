@@ -204,7 +204,7 @@ eval "$(mise activate zsh)"
 
 # Zsh plugins
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-source $(brew --prefix)/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+source $(brew --prefix)/opt/zsh-fast-syntax-highlighting/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 
 # Starship (last)
 eval "$(starship init zsh)"

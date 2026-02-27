@@ -12,7 +12,7 @@ brew "mise"
 brew "gh"
 cask "1password-cli"
 brew "zsh-autosuggestions"
-brew "zsh-syntax-highlighting"
+brew "zsh-fast-syntax-highlighting"
 
 # Apps
 cask "1password"
