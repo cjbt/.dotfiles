@@ -68,7 +68,7 @@ The slug is derived from the company argument: `basename "$COMPANY" | tr '[:uppe
 
 | Invocation | Slug | Script sourced |
 |---|---|---|
-| `./install.sh "work/LATimes"` | `latimes` | `companies/latimes.sh` |
+| `./install.sh latimes` | `latimes` | `companies/latimes.sh` |
 | `./install.sh personal` | `personal` | *(not found — skipped)* |
 
 Company scripts inherit all variables (`$COMPANY`, `$DOTFILES_DIR`, `$SECRETS_DIR`) and helper functions (`op_item_exists`, `op_read_field`, `info`, `warn`, `error`).
