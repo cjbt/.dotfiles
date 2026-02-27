@@ -76,9 +76,11 @@ fi
 # ── 6. GitLab Config (optional) ────────────────────────────────────────────────
 if op_item_exists "$COMPANY" "GitLab Config"; then
   info "Writing ~/.gitconfig-gitlab..."
+  GITLAB_EMAIL="$(op_read_field "$COMPANY" "GitLab Config" "email")"
   GITLAB_SIGNING_KEY="$(op_read_field "$COMPANY" "GitLab Config" "signing_key")"
   cat > ~/.gitconfig-gitlab <<EOF
 [user]
+	email = ${GITLAB_EMAIL}
 	signingKey = ${GITLAB_SIGNING_KEY}
 EOF
   chmod 600 ~/.gitconfig-gitlab
