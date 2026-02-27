@@ -168,6 +168,7 @@ alias catp='bat --plain --paging=never'
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 
 alias rg='rg --smart-case'
+alias cd='z'
 
 # -----------------------------------------------------------------------------
 # Company Secrets
@@ -215,7 +216,6 @@ export ANTHROPIC_MODEL=opusplan
 
 # zoxide (must be last)
 eval "$(zoxide init zsh)"
-alias cd='z'
 
 # uncomment to test diagnostics
 #zprof
